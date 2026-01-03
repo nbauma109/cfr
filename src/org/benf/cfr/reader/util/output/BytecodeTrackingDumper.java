@@ -138,4 +138,9 @@ class BytecodeTrackingDumper extends DelegatingDumper {
         consumer.accept(result);
         delegate.close();
     }
+
+    @Override
+    public Dumper withTypeUsageInformation(TypeUsageInformation innerclassTypeUsageInformation) {
+        return new TypeOverridingDumper(this, innerclassTypeUsageInformation);
+    }
 }
