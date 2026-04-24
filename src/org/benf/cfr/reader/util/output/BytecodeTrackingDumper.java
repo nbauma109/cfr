@@ -44,13 +44,13 @@ class BytecodeTrackingDumper extends DelegatingDumper {
                 perMethod.get(method).add(offsets, currentDepth, currentLine);
                 continue;
             }
-            List<Integer> normalizedOffsets = ListFactory.newList();
+            List<Integer> candidateOffsets = ListFactory.newList();
             for (Integer offset : offsets) {
                 if (offset == null) continue;
-                Integer normalized = lineNumberTable.floorKey(offset);
-                normalizedOffsets.add(normalized == null ? offset : normalized);
+                Integer candidate = lineNumberTable.containsKey(offset) ? offset : lineNumberTable.floorKey(offset);
+                candidateOffsets.add(candidate == null ? offset : candidate);
             }
-            perMethod.get(method).add(normalizedOffsets, currentDepth, currentLine);
+            perMethod.get(method).add(candidateOffsets, currentDepth, currentLine);
         }
     }
 
