@@ -59,6 +59,12 @@
             <version>5.8.2</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse.jdt</groupId>
+            <artifactId>ecj</artifactId>
+            <version>3.25.0</version>
+            <scope>test</scope>
+        </dependency>
         <!-- For decompilation test result diff -->
         <dependency>
             <groupId>io.github.java-diff-utils</groupId>
