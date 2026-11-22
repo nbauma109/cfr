@@ -27,6 +27,38 @@ jobs:
       name: Build with Maven
       run: mvn --batch-mode --update-snapshots -Dgpg.skip=true clean verify
 
+    - name: Verify issue 389 loop-counter semantics
+      run: |
+        set -euo pipefail
+        git -C decompilation-test/test-data fetch https://github.com/nbauma109/cfr_tests.git refs/heads/review/issue-389-loop-scope-regression
+        git -C decompilation-test/test-data checkout --detach FETCH_HEAD
+        workdir="$(mktemp -d)"
+        trap 'rm -rf "$workdir"' EXIT
+        mkdir -p "$workdir/original" "$workdir/decompiled" "$workdir/roundtrip"
+        javac -source 7 -target 7 -d "$workdir/original" decompilation-test/test-data/src_6/org/benf/cfr/tests/LoopCounterOutlivesForTest.java
+        cat > "$workdir/LoopScopeHarness.java" <<'JAVA'
+        import org.benf.cfr.tests.LoopCounterOutlivesForTest;
+
+        public final class LoopScopeHarness {
+            public static void main(String[] args) {
+                int[] values = {1, 1, 0, 0};
+                LoopCounterOutlivesForTest test = new LoopCounterOutlivesForTest();
+                int next = test.markFirstVacant(values);
+                if (next != 2 || values[2] != 9 || test.getFieldValue() != 73) {
+                    throw new AssertionError("The loop counter was not preserved");
+                }
+                System.out.println(next + ":" + values[2] + ":" + test.getFieldValue());
+            }
+        }
+        JAVA
+        javac -cp "$workdir/original" -d "$workdir/original" "$workdir/LoopScopeHarness.java"
+        java -cp "$workdir/original" LoopScopeHarness > "$workdir/original-output.txt"
+        java -cp target/classes org.benf.cfr.reader.Main "$workdir/original/org/benf/cfr/tests/LoopCounterOutlivesForTest.class" --outputdir "$workdir/decompiled"
+        javac -d "$workdir/roundtrip" "$workdir/decompiled/org/benf/cfr/tests/LoopCounterOutlivesForTest.java"
+        cp "$workdir/original/LoopScopeHarness.class" "$workdir/roundtrip/"
+        java -cp "$workdir/roundtrip" LoopScopeHarness > "$workdir/roundtrip-output.txt"
+        diff -u "$workdir/original-output.txt" "$workdir/roundtrip-output.txt"
+
     - name: Check JaCoCo coverage report
       run: test -s target/site/jacoco/jacoco.xml
 
