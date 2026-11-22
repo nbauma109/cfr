@@ -44,7 +44,8 @@ current_output="$report_root/current"
 mkdir -p "$baseline_output" "$current_output"
 echo "Comparing $fixture_set: ${#fixture_files[@]} compiled fixture inputs"
 
-timeout 20m java -Xmx2g -cp "$baseline_classes" org.benf.cfr.reader.Main \
+timeout 20m java -Xmx2g -javaagent:"$agent_jar=destfile=$report_root/baseline.exec,append=false" \
+    -cp "$baseline_classes" org.benf.cfr.reader.Main \
     "${fixture_files[@]}" --showversion false --dumpexceptionstacktrace false \
     --renameillegalidents true --outputdir "$baseline_output" > "$report_root/baseline.log" 2>&1
 
@@ -67,6 +68,7 @@ done
 if ! diff -qr "$baseline_output" "$current_output" > "$report_root/output.diff"; then
     echo "Decompilation output differs from master for $fixture_set:" >&2
     head -n 40 "$report_root/output.diff" >&2
+    diff -ru "$baseline_output" "$current_output" | head -n 100 >&2 || true
     exit 1
 fi
 
