@@ -55,6 +55,7 @@ jobs:
         javac -cp "$workdir/original" -d "$workdir/original" "$workdir/LoopScopeHarness.java"
         java -cp "$workdir/original" LoopScopeHarness > "$workdir/original-output.txt"
         java -cp target/classes org.benf.cfr.reader.Main "$workdir/original/org/benf/cfr/tests/LoopCounterOutlivesForTest.class" --outputdir "$workdir/decompiled"
+        cat "$workdir/decompiled/org/benf/cfr/tests/LoopCounterOutlivesForTest.java"
         javac -d "$workdir/roundtrip" "$workdir/decompiled/org/benf/cfr/tests/LoopCounterOutlivesForTest.java"
         cp "$workdir/original/LoopScopeHarness.class" "$workdir/roundtrip/"
         java -cp "$workdir/roundtrip" LoopScopeHarness > "$workdir/roundtrip-output.txt"
