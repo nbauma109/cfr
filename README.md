@@ -41,60 +41,49 @@ to get CFR to decompile `java.lang.Object`.
 
 ## Decompilation tests
 
-As part of the Maven build automatic decompilation tests are performed. They verify that the current decompiled output of CFR matches the expected previous output. The test data (Java class and JAR files) are part of a separate Git repository; it is therefore necessary to clone this repository with `git clone --recurse-submodules`. The expected output and CFR test configuration is however part of this repository to allow altering it without having to modify the corresponding test data. The test data is in the `decompilation-test/test-data` directory, and the respective expected data and custom configuration is in the `decompilation-test/test-data-expected-output` directory (with a similar directory structure, see [Expected data structure](#expected-data-structure) below).
+As part of the Maven build automatic decompilation tests are performed. They verify that the current decompiled output of CFR matches the expected previous output. The compiled test inputs are part of a separate Git repository; it is therefore necessary to clone this repository with `git clone --recurse-submodules`. The expected output and XML test specifications are part of this repository so they can be updated independently of the test data. The test data is in `decompilation-test/test-data`, the expected results are in `decompilation-test/test-data-expected-output`, and the selected test cases are defined in `decompilation-test/test-specs/classes.xml` (see [Test specifications](#test-specifications) below).
 
 The decompilation tests are also performed by the GitHub workflow, and in case of test failures the unified diff is available in a [workflow artifact](https://docs.github.com/en/actions/managing-workflow-runs/downloading-workflow-artifacts) called "decompilation-test-failures-diff".
 
 **The expected output is not the gold standard**, it merely describes the currently expected output. There is nothing wrong with adjusting the expected output, if the changes to the decompilation results are reasonable.
 
-The test class is [`org.benf.cfr.test.DecompilationTest`](decompilation-test/src/org/benf/cfr/test/DecompilationTest.java). It can be modified to adjust the test directories, or to ignore certain class files or JARs. Additionally it is possible to directly execute the tests there from the IDE. This usually gives better output than what is shown by Maven, and allows using the built-in IDE functionality for showing differences between the expected and the actual data.
+The test class is [`org.benf.cfr.test.DecompilationTest`](decompilation-test/src/org/benf/cfr/test/DecompilationTest.java). To add or change class-file test cases, edit the XML specifications rather than the test class. Additionally it is possible to directly execute the tests there from the IDE. This usually gives better output than what is shown by Maven, and allows using the built-in IDE functionality for showing differences between the expected and the actual data.
 
-### Options file
+### Test specifications
 
-The decompilation process can be customized by adding an options file. Each line of it specifies a CFR option, with key and value separated by a space. Empty lines and lines starting with `#` are ignored and can be used for comments.
+The tests to run are selected in
+[`decompilation-test/test-specs/classes.xml`](decompilation-test/test-specs/classes.xml).
+Each `<class>` entry identifies a compiled class in the test-data submodule:
 
-Example:
+```xml
+<class>
+    <path>precompiled_tests/java_6/org/benf/cfr/tests</path>
+    <name>CondJumpTest2c</name>
+    <label>6</label>
+    <options>
+        <option key="usenametable" value="false"/>
+    </options>
+</class>
 ```
-# Enable identifier renaming
-renameillegalidents true
-```
 
-See [Expected data structure](#expected-data-structure) below for how to name the file and where to place it.
+The `path` is relative to `decompilation-test/test-data`, and `name` identifies the
+`.class` file without its extension. The `label` distinguishes test cases (for example,
+the compiler version). `options` is optional; each `option` supplies a CFR command-line
+option using `key` and `value` attributes. Separate `.options` files are not supported.
 
-### Expected data structure
+### Expected output
 
-#### Class files
+For each specified class, expected output lives in
+`decompilation-test/test-data-expected-output/classes/`. The file prefix is
+`<name>.<label>`, so the example above uses:
 
-For class files the expected data and custom configuration is in the same respective location under `test-data-expected-output`, with the file names being based on the class file name.
+- `CondJumpTest2c.6.expected.java` — expected decompiled Java source
+- `CondJumpTest2c.6.expected.summary` — expected CFR API summary, if any
+- `CondJumpTest2c.6.expected.exceptions` — expected CFR API exceptions, if any
 
-For example, for the class file `test-data/classes/subdir/MyClass.class` the following files can be used:
-
-- `test-data-expected-output/classes/subdir/`
-    - `MyClass.expected.java`  
-      Contains the expected decompiled Java output, optionally with [decompilation notes](#decompilation-note-comments).
-    - `MyClass.options`  
-      An optional [options file](#options-file) customizing decompilation.
-    - `MyClass.expected.summary`  
-      Contains the expected summary reported by the CFR API. Can be omitted when no summary is produced.
-    - `MyClass.expected.exceptions`  
-      Contains the expected exceptions reported by the CFR API. Can be omitted when no exception is reported.
-
-#### JAR files
-
-For JAR files the expected data and custom configuration is inside a directory with the name of the JAR file in the respective location under `test-data-expected-output`. Expected Java output files include the package name in their file name, for example `mypackage.MyClass.java`. The options file and the expected summary and exceptions file use the "file name" `_`. For [multi-release JARs](https://openjdk.java.net/jeps/238) the directory contains subdirectories for version specific classes. The directory name has the form `java-<version>`.
-
-For example, for the multi-release JAR file `test-data/jars/subdir/MyJar.jar` the following files can be used:
-- `test-data-expected-output/jars/subdir/MyJar/`
-    - `mypackage.MyClass.java`  
-      Contains the expected decompiled Java output for the class `mypackage.MyClass`, optionally with [decompilation notes](#decompilation-note-comments).
-    - `java-11/mypackage.MyClass.java`  
-      Contains the expected decompiled Java output for a class file specific to Java 11 and higher (for multi-release JARs).
-    - `_.options`  
-      An optional [options file](#options-file) customizing decompilation.
-    - `_.expected.summary`  
-      Contains the expected summary reported by the CFR API. Can be omitted when no summary is produced.
-    - `_.expected.exceptions`  
-      Contains the expected exceptions reported by the CFR API. Can be omitted when no exception is reported.
+The Java source file is required. Summary and exception files are only necessary
+when CFR reports the corresponding output. The current XML-driven Maven test
+provider selects class-file cases; it does not select JAR fixtures.
 
 ### Decompilation note comments
 
