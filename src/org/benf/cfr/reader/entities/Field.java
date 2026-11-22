@@ -229,7 +229,7 @@ public class Field implements KnowsRawSize, TypeUsageCollectable {
     public void dump(Dumper d, String name, ClassFile owner, boolean asRecordField) {
         JavaTypeInstance type = getJavaTypeInstance();
 
-        List<AnnotationTableEntry> declarationAnnotations = MiscAnnotations.BasicAnnotations(attributes);
+        List<AnnotationTableEntry> declarationAnnotations = getDeclarationAnnotations();
         // If field is backing a record component, get annotations for component as well
         if (asRecordField) {
             declarationAnnotations = getRecordComponentAnnotations(owner, declarationAnnotations);
@@ -279,6 +279,10 @@ public class Field implements KnowsRawSize, TypeUsageCollectable {
             d.dump(jah);
         }
         d.print(' ').fieldName(name, owner.getClassType(), false, false, true);
+    }
+
+    public List<AnnotationTableEntry> getDeclarationAnnotations() {
+        return MiscAnnotations.BasicAnnotations(attributes);
     }
 
     public boolean isAccessibleFrom(JavaRefTypeInstance maybeCaller, ClassFile classFile) {
