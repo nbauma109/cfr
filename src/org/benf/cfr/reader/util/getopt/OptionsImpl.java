@@ -370,6 +370,9 @@ public class OptionsImpl implements Options {
     public static final PermittedOptionProvider.Argument<Boolean> SUGAR_RETRO_LAMBDA = register(new PermittedOptionProvider.Argument<Boolean>(
             "sugarretrolambda", defaultFalseBooleanDecoder,
             "Where possible, resugar uses of retro lambda"));
+    public static final PermittedOptionProvider.Argument<Boolean> SHOW_CFR_HEADER = register(new PermittedOptionProvider.Argument<Boolean>(
+            "showheader", defaultTrueBooleanDecoder,
+            "Include the CFR header comment in decompiled source"));
     public static final PermittedOptionProvider.Argument<Boolean> SHOW_CFR_VERSION = register(new PermittedOptionProvider.Argument<Boolean>(
             "showversion", defaultTrueBooleanDecoder,
             "Show used CFR version in header (handy to turn off when regression testing)"));
