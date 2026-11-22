@@ -111,6 +111,13 @@ public class CastExpression extends AbstractExpression implements BoxingProcesso
             child.dumpWithOuterPrecedence(d, getPrecedence(), Troolean.NEITHER);
         } else {
             d.separator("(").dump(castType).separator(")");
+            if (child instanceof Literal && ((Literal) child).getValue().getType() == LiteralType.Integer) {
+                RawJavaType primitive = RawJavaType.getUnboxedTypeFor(castType);
+                if (primitive == RawJavaType.BYTE || primitive == RawJavaType.SHORT ||
+                        primitive == RawJavaType.CHAR) {
+                    d.separator("(").dump(primitive).separator(")");
+                }
+            }
             child.dumpWithOuterPrecedence(d, getPrecedence(), Troolean.NEITHER);
         }
         return d;
