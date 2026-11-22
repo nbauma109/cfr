@@ -27,6 +27,29 @@ jobs:
       name: Build with Maven
       run: mvn --batch-mode --update-snapshots -Dgpg.skip=true clean verify
 
+    - name: Build comparison baseline from master
+      run: |
+        git fetch --no-tags --depth=1 origin master
+        git worktree add --detach target/coverage-baseline-source FETCH_HEAD
+        mvn --batch-mode -f target/coverage-baseline-source/pom.xml -Dgpg.skip=true -DskipTests compile
+
+    - id: corpus-regression
+      name: Compare all precompiled and hardcoded fixtures against master
+      run: bash .github/scripts/corpus-regression-coverage.sh target/coverage-baseline-source/target/classes target/classes
+
+    - name: Regenerate coverage report with corpus execution data
+      run: mvn --batch-mode -Dgpg.skip=true jacoco:report
+
+    - name: Upload corpus regression failures artifact
+      if: failure() && steps.corpus-regression.outcome == 'failure'
+      uses: actions/upload-artifact@v7
+      with:
+        name: corpus-regression-failures
+        path: |
+          target/corpus-regression/**/*.diff
+          target/corpus-regression/*.diff
+          target/corpus-regression/*.log
+
     - name: Check JaCoCo coverage report
       run: test -s target/site/jacoco/jacoco.xml
 
