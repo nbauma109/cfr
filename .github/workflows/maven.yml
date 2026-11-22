@@ -31,7 +31,7 @@ jobs:
       run: |
         git fetch --no-tags --unshallow origin master
         git clone --no-hardlinks --recurse-submodules . target/coverage-baseline-source
-        git -C target/coverage-baseline-source checkout --detach FETCH_HEAD
+        git -C target/coverage-baseline-source checkout --detach "$(git rev-parse FETCH_HEAD)"
         mvn --batch-mode -f target/coverage-baseline-source/pom.xml -Dgpg.skip=true -DskipTests compile
 
     - id: corpus-regression
