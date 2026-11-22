@@ -29,7 +29,7 @@ jobs:
 
     - name: Build comparison baseline from master
       run: |
-        git fetch --no-tags --depth=1 origin master
+        git fetch --no-tags --unshallow origin master
         git worktree add --detach target/coverage-baseline-source FETCH_HEAD
         mvn --batch-mode -f target/coverage-baseline-source/pom.xml -Dgpg.skip=true -DskipTests compile
 
