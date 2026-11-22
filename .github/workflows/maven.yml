@@ -41,13 +41,14 @@ jobs:
 
         public final class LoopScopeHarness {
             public static void main(String[] args) {
-                int[] values = {1, 1, 0, 0};
                 LoopCounterOutlivesForTest test = new LoopCounterOutlivesForTest();
-                int next = test.markFirstVacant(values);
-                if (next != 2 || values[2] != 9 || test.getFieldValue() != 73) {
+                LoopCounterOutlivesForTest.markTerminalSlot(2);
+                test.markFirstVacant(9);
+                int actual = LoopCounterOutlivesForTest.getRecordedValue(2);
+                if (actual != 9 || test.getFieldValue() != 73) {
                     throw new AssertionError("The loop counter was not preserved");
                 }
-                System.out.println(next + ":" + values[2] + ":" + test.getFieldValue());
+                System.out.println(actual + ":" + test.getFieldValue());
             }
         }
         JAVA
