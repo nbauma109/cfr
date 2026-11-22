@@ -2,6 +2,8 @@
 
 This is the public repository for the CFR decompiler, main site hosted at [benf.org/other/cfr](https://www.benf.org/other/cfr)
 
+[![Code coverage](https://codecov.io/gh/nbauma109/cfr/branch/master/graph/badge.svg)](https://app.codecov.io/gh/nbauma109/cfr)
+
 CFR will decompile modern Java features - [including much of Java 9](https://www.benf.org/other/cfr/java9observations.html), [12](https://www.benf.org/other/cfr/switch_expressions.html) & [14](https://www.benf.org/other/cfr/java14instanceof_pattern), but is written entirely in Java 6, so will work anywhere!  ([FAQ](https://www.benf.org/other/cfr/faq.html)) - It'll even make a decent go of turning class files from other JVM languages back into java!
 
 To use, simply run the specific version jar, with the class name(s) you want to decompile (either as a path to a class file, or as a fully qualified classname on your classpath).
@@ -40,6 +42,10 @@ to get CFR to decompile `java.lang.Object`.
 
 
 ## Decompilation tests
+
+The Maven verification build also generates a [JaCoCo](https://www.jacoco.org/jacoco/) coverage report at `target/site/jacoco/index.html` and `target/site/jacoco/jacoco.xml`. GitHub Actions archives this report and uploads it to [Codecov](https://app.codecov.io/gh/nbauma109/cfr). To enable uploads, add the repository to Codecov and configure the `CODECOV_TOKEN` GitHub Actions secret if required.
+
+Coverage measures which CFR code paths the regression suite exercises; it does not prove that decompiled programs preserve their original runtime behavior.
 
 As part of the Maven build automatic decompilation tests are performed. They verify that the current decompiled output of CFR matches the expected previous output. The test data (Java class and JAR files) are part of a separate Git repository; it is therefore necessary to clone this repository with `git clone --recurse-submodules`. The expected output and CFR test configuration is however part of this repository to allow altering it without having to modify the corresponding test data. The test data is in the `decompilation-test/test-data` directory, and the respective expected data and custom configuration is in the `decompilation-test/test-data-expected-output` directory (with a similar directory structure, see [Expected data structure](#expected-data-structure) below).
 
