@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@v6
       with:
         # Clone decompilation test data submodule
-        submodules: true
+        submodules: recursive
 
     - name: Set up Java
       uses: actions/setup-java@v5
@@ -26,6 +26,38 @@ jobs:
     - id: maven-build
       name: Build with Maven
       run: mvn --batch-mode --update-snapshots -Dgpg.skip=true clean verify
+
+    - name: Verify issue 386 resource-closing semantics
+      run: |
+        set -euo pipefail
+        git -C decompilation-test/test-data fetch https://github.com/nbauma109/cfr_tests.git refs/heads/review/issue-386-try-resources-regression
+        git -C decompilation-test/test-data checkout --detach FETCH_HEAD
+        workdir="$(mktemp -d)"
+        trap 'rm -rf "$workdir"' EXIT
+        mkdir -p "$workdir/original" "$workdir/decompiled" "$workdir/roundtrip"
+        javac -source 8 -target 8 -d "$workdir/original" decompilation-test/test-data/src_8/org/benf/cfr/tests/TryResourcesCloseFailureTest.java
+        cat > "$workdir/ResourceCloseHarness.java" <<'JAVA'
+        import org.benf.cfr.tests.TryResourcesCloseFailureTest;
+
+        public final class ResourceCloseHarness {
+            public static void main(String[] args) {
+                String actual = new TryResourcesCloseFailureTest().examineClosingException();
+                String expected = "second:0|body;second;first;caught;finally;";
+                if (!expected.equals(actual)) {
+                    throw new AssertionError("Resource closing changed: " + actual);
+                }
+                System.out.println(actual);
+            }
+        }
+        JAVA
+        javac -cp "$workdir/original" -d "$workdir/original" "$workdir/ResourceCloseHarness.java"
+        java -cp "$workdir/original" ResourceCloseHarness > "$workdir/original-output.txt"
+        jar cf "$workdir/input.jar" -C "$workdir/original" org/benf/cfr/tests
+        java -cp target/classes org.benf.cfr.reader.Main "$workdir/input.jar" --outputdir "$workdir/decompiled"
+        find "$workdir/decompiled" -name '*.java' -print0 | xargs -0 javac -d "$workdir/roundtrip"
+        cp "$workdir/original/ResourceCloseHarness.class" "$workdir/roundtrip/"
+        java -cp "$workdir/roundtrip" ResourceCloseHarness > "$workdir/roundtrip-output.txt"
+        diff -u "$workdir/original-output.txt" "$workdir/roundtrip-output.txt"
 
     - name: Upload decompilation test failures artifact
       # Only run when Maven build failed, see https://github.community/t/run-step-only-if-previous-step-failed/127124/3
