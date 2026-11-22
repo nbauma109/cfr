@@ -14,7 +14,7 @@ jobs:
       uses: actions/checkout@v6
       with:
         # Clone decompilation test data submodule
-        submodules: true
+        submodules: recursive
 
     - name: Set up Java
       uses: actions/setup-java@v5
@@ -26,6 +26,23 @@ jobs:
     - id: maven-build
       name: Build with Maven
       run: mvn --batch-mode --update-snapshots -Dgpg.skip=true clean verify
+
+    - name: Check JaCoCo coverage report
+      run: test -s target/site/jacoco/jacoco.xml
+
+    - name: Upload coverage report artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: jacoco-coverage-report
+        path: target/site/jacoco/
+        if-no-files-found: error
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        files: target/site/jacoco/jacoco.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false
 
     - name: Upload decompilation test failures artifact
       # Only run when Maven build failed, see https://github.community/t/run-step-only-if-previous-step-failed/127124/3
