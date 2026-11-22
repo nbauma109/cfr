@@ -31,27 +31,27 @@ compare_fixture_set() {
     local current_log="$report_root/$name.current.log"
     local comparison_log="$report_root/$name.diff"
     local class_file
-    local -a class_files=()
+    local -a fixture_files=()
 
     while IFS= read -r -d '' class_file; do
-        class_files+=("$class_file")
-    done < <(find "$source_dir" -type f -name '*.class' -print0 | sort -z)
+        fixture_files+=("$class_file")
+    done < <(find "$source_dir" -type f \( -name '*.class' -o -name '*.jar' \) -print0 | sort -z)
 
-    if (( ${#class_files[@]} == 0 )); then
+    if (( ${#fixture_files[@]} == 0 )); then
         echo "No compiled classes found in $source_dir" >&2
         exit 1
     fi
 
-    echo "Comparing $name: ${#class_files[@]} class files"
+    echo "Comparing $name: ${#fixture_files[@]} compiled fixture inputs"
     mkdir -p "$baseline_output" "$current_output"
 
     java -Xmx2g -cp "$baseline_classes" org.benf.cfr.reader.Main \
-        "${class_files[@]}" --showversion false --dumpexceptionstacktrace false \
+        "${fixture_files[@]}" --showversion false --dumpexceptionstacktrace false \
         --renameillegalidents true --outputdir "$baseline_output" > "$baseline_log" 2>&1
 
     java -Xmx2g -javaagent:"$agent_jar=destfile=$execution_data,append=true" \
         -cp "$current_classes" org.benf.cfr.reader.Main \
-        "${class_files[@]}" --showversion false --dumpexceptionstacktrace false \
+        "${fixture_files[@]}" --showversion false --dumpexceptionstacktrace false \
         --renameillegalidents true --outputdir "$current_output" > "$current_log" 2>&1
 
     if ! find "$current_output" -type f -name '*.java' -print -quit | grep -q .; then
@@ -65,13 +65,19 @@ compare_fixture_set() {
         exit 1
     fi
 
-    total_classes=$((total_classes + ${#class_files[@]}))
+    total_classes=$((total_classes + ${#fixture_files[@]}))
     total_variants=$((total_variants + 1))
 }
 
 for fixture_directory in "$fixture_root"/precompiled_tests/*; do
     if [[ -d "$fixture_directory" ]]; then
         compare_fixture_set "${fixture_directory##*/}" "$fixture_directory"
+    fi
+done
+
+for fixture_directory in "$fixture_root"/output/*; do
+    if [[ -d "$fixture_directory" ]]; then
+        compare_fixture_set "compiled-${fixture_directory##*/}" "$fixture_directory"
     fi
 done
 
