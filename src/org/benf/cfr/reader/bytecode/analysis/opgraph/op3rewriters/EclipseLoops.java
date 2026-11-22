@@ -41,7 +41,69 @@ public class EclipseLoops {
      * If this is the case, replace (a) with negated (b), which jumps on success to (c).
      * replace (b) with an unconditional jump to a.
      */
+    private static boolean isSharedEclipseLoopTest(List<Op03SimpleStatement> statements,
+                                                   Op03SimpleStatement conditional,
+                                                   Op03SimpleStatement bodyStart) {
+        Op03SimpleStatement loopTest = conditional.getTargets().get(1);
+        if (loopTest.getIndex().compareTo(bodyStart.getIndex()) <= 0 ||
+                loopTest.getStatement().getClass() != IfStatement.class ||
+                loopTest.getTargets().size() != 2 ||
+                loopTest.getTargets().get(1) != bodyStart ||
+                !conditional.getBlockIdentifiers().equals(bodyStart.getBlockIdentifiers())) {
+            return false;
+        }
+        int testIndex = statements.indexOf(loopTest);
+        if (testIndex < 0 || testIndex + 1 >= statements.size() ||
+                loopTest.getTargets().get(0) != statements.get(testIndex + 1)) {
+            return false;
+        }
+        boolean hasBodySource = false;
+        for (Op03SimpleStatement source : loopTest.getSources()) {
+            if (source == conditional) {
+                continue;
+            }
+            if (source.getIndex().compareTo(bodyStart.getIndex()) < 0 ||
+                    source.getIndex().compareTo(loopTest.getIndex()) >= 0) {
+                return false;
+            }
+            hasBodySource = true;
+        }
+        return hasBodySource;
+    }
+
+    private static void exposeLoopEntryAfterEarlyReturn(List<Op03SimpleStatement> statements) {
+        for (int index = 0; index < statements.size() - 3; ++index) {
+            Op03SimpleStatement conditional = statements.get(index);
+            if (conditional.getStatement().getClass() != IfStatement.class ||
+                    conditional.getTargets().size() != 2) {
+                continue;
+            }
+            Op03SimpleStatement earlyReturn = statements.get(index + 1);
+            if (earlyReturn != conditional.getTargets().get(0) ||
+                    !earlyReturn.getTargets().isEmpty()) {
+                continue;
+            }
+            Op03SimpleStatement bodyStart = statements.get(index + 2);
+            if (!isSharedEclipseLoopTest(statements, conditional, bodyStart)) {
+                continue;
+            }
+
+            Op03SimpleStatement loopTest = conditional.getTargets().get(1);
+            // We expose the entry to the existing Eclipse pass without copying the loop condition.
+            Op03SimpleStatement entry = new Op03SimpleStatement(
+                    conditional.getBlockIdentifiers(), new GotoStatement(BytecodeLoc.NONE),
+                    earlyReturn.getIndex().justAfter());
+            entry.addSource(conditional);
+            entry.addTarget(loopTest);
+            conditional.replaceTarget(loopTest, entry);
+            loopTest.replaceSource(conditional, entry);
+            statements.add(index + 2, entry);
+            index += 2;
+        }
+    }
+
     public static void eclipseLoopPass(List<Op03SimpleStatement> statements) {
+        exposeLoopEntryAfterEarlyReturn(statements);
         boolean effect = false;
         for (int x = 0, len = statements.size() - 1; x < len; ++x) {
             Op03SimpleStatement statement = statements.get(x);
