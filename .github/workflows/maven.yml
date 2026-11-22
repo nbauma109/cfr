@@ -34,6 +34,30 @@ jobs:
         git -C target/coverage-baseline-source checkout --detach "$(git rev-parse FETCH_HEAD)"
         mvn --batch-mode -f target/coverage-baseline-source/pom.xml -Dgpg.skip=true -DskipTests compile
 
+    - name: Set up Java 21 for additional fixtures
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 21
+
+    - name: Compile Java 21 fixture sources
+      run: mvn --batch-mode -f decompilation-test/test-data/pom.xml -P java_21 -DJAVA_21_HOME="$JAVA_HOME" compile
+
+    - name: Set up Java 25 for additional fixtures
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 25
+
+    - name: Compile Java 25 fixture sources
+      run: mvn --batch-mode -f decompilation-test/test-data/pom.xml -P java_25 -DJAVA_25_HOME="$JAVA_HOME" compile
+
+    - name: Restore Java 8 for CFR regression coverage
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 8
+
     - id: corpus-regression
       name: Compare all precompiled and hardcoded fixtures against master
       run: bash .github/scripts/corpus-regression-coverage.sh target/coverage-baseline-source/target/classes target/classes
