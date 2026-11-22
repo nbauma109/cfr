@@ -9,6 +9,7 @@ import org.benf.cfr.reader.bytecode.analysis.parse.utils.Pair;
 import org.benf.cfr.reader.bytecode.analysis.types.ClassSignature;
 import org.benf.cfr.reader.bytecode.analysis.types.JavaTypeInstance;
 import org.benf.cfr.reader.entities.*;
+import org.benf.cfr.reader.entities.annotations.AnnotationTableEntry;
 import org.benf.cfr.reader.state.DCCommonState;
 import org.benf.cfr.reader.state.TypeUsageCollector;
 import org.benf.cfr.reader.util.MiscUtils;
@@ -48,9 +49,20 @@ public class ClassFileDumperEnum extends AbstractClassFileDumper {
         }
     }
 
-    private static void dumpEntry(Dumper d, Pair<StaticVariable, AbstractConstructorInvokation> entry, boolean last, JavaTypeInstance classType) {
+    private static void dumpEntry(Dumper d, Pair<StaticVariable, AbstractConstructorInvokation> entry, boolean last, JavaTypeInstance classType, List<ClassFileField> fields) {
         StaticVariable staticVariable = entry.getFirst();
         AbstractConstructorInvokation constructorInvokation = entry.getSecond();
+        for (ClassFileField field : fields) {
+            if (field.getFieldName().equals(staticVariable.getFieldName())) {
+                List<AnnotationTableEntry> annotations = field.getField().getDeclarationAnnotations();
+                if (annotations != null) {
+                    for (AnnotationTableEntry annotation : annotations) {
+                        annotation.dump(d).newln();
+                    }
+                }
+                break;
+            }
+        }
         d.fieldName(staticVariable.getFieldName(), classType, false, true, true);
 
         if (constructorInvokation instanceof ConstructorInvokationSimple) {
@@ -92,7 +104,7 @@ public class ClassFileDumperEnum extends AbstractClassFileDumper {
         JavaTypeInstance classType = classFile.getClassType();
 
         for (int x = 0, len = entries.size(); x < len; ++x) {
-            dumpEntry(d, entries.get(x), (x == len - 1), classType);
+            dumpEntry(d, entries.get(x), (x == len - 1), classType, classFile.getFields());
         }
 
         d.newln();
