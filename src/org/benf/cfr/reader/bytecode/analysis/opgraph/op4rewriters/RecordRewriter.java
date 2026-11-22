@@ -132,10 +132,15 @@ public class RecordRewriter {
         JavaRefTypeInstance thisType = classFile.getRefClassType();
         // At this point, we're going to proceed, so can make changes.
 
+        List<LocalVariable> constructorParameters = canonicalCons.getMethodPrototype().getComputedParameters();
+        for (int i = 0; i < instances.size(); ++i) {
+            constructorParameters.get(i).getName().forceName(instances.get(i).getFieldName());
+        }
+
         // Assignments from the parameters to the members should be at the end, in which case
         // they can hidden / removed.
         // If there is no code after this, the canonical can be hidden as implicit.
-        if (removeImplicitAssignments(canonicalCons, instances, thisType)) {
+        if (!canonicalCons.hasDumpableAttributes() && removeImplicitAssignments(canonicalCons, instances, thisType)) {
             // Mark the canonical constructor for later.
             canonicalCons.setConstructorFlag(Method.MethodConstructor.RECORD_CANONICAL_CONSTRUCTOR);
         }
@@ -311,13 +316,13 @@ public class RecordRewriter {
          * by accident or introducing unwanted side effects by placing them on record component,
          * just keep the method.
          */
-        if (method.getMethodAnnotations().isEmpty()) {
+        if (!method.hasDumpableAttributes()) {
             method.hideDead();
         }
     }
 
     private static void hideConstructorIfEmpty(Method canonicalCons) {
-        if (canonicalCons.getCodeAttribute() == null) return;
+        if (canonicalCons.hasDumpableAttributes() || canonicalCons.getCodeAttribute() == null) return;
         Op04StructuredStatement code = canonicalCons.getAnalysis();
         if (code.getStatement().isEffectivelyNOP()) {
             canonicalCons.hideDead();
