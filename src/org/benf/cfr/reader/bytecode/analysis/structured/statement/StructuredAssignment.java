@@ -82,6 +82,7 @@ public class StructuredAssignment extends AbstractStructuredStatement implements
     @Override
     public void traceLocalVariableScope(LValueScopeDiscoverer scopeDiscoverer) {
         rvalue.collectUsedLValues(scopeDiscoverer);
+        lvalue.collectLValueUsage(scopeDiscoverer);
         // todo - what if rvalue is an assignment?
         lvalue.collectLValueAssignments(rvalue, getContainer(), scopeDiscoverer);
     }
