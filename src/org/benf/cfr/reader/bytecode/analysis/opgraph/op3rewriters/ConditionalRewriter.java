@@ -52,8 +52,8 @@ public class ConditionalRewriter {
             List<Op03SimpleStatement> forwardIfs = Functional.filter(statements, new IsForwardIf());
             Collections.reverse(forwardIfs);
             for (Op03SimpleStatement forwardIf : forwardIfs) {
-                if (considerAsTrivialIf(forwardIf, statements) ||
-                        considerAsSimpleIf(forwardIf, statements, blockIdentifierFactory, ignoreTheseJumps, reduceSimpleScope) ||
+                considerAsTrivialIf(forwardIf, statements);
+                if (considerAsSimpleIf(forwardIf, statements, blockIdentifierFactory, ignoreTheseJumps, reduceSimpleScope) ||
                         considerAsDexIf(forwardIf, statements)) {
                     success = true;
                 }
@@ -61,21 +61,19 @@ public class ConditionalRewriter {
         } while (success);
     }
 
-    private static boolean considerAsTrivialIf(Op03SimpleStatement ifStatement, List<Op03SimpleStatement> statements) {
+    private static void considerAsTrivialIf(Op03SimpleStatement ifStatement, List<Op03SimpleStatement> statements) {
         Op03SimpleStatement takenTarget = ifStatement.getTargets().get(1);
         Op03SimpleStatement notTakenTarget = ifStatement.getTargets().get(0);
         int idxTaken = statements.indexOf(takenTarget);
         int idxNotTaken = statements.indexOf(notTakenTarget);
-        if (idxTaken != idxNotTaken + 1) return false;
+        if (idxTaken != idxNotTaken + 1) return;
         if (!(takenTarget.getStatement().getClass() == GotoStatement.class &&
                 notTakenTarget.getStatement().getClass() == GotoStatement.class &&
                 takenTarget.getTargets().get(0) == notTakenTarget.getTargets().get(0))) {
-            return false;
+            return;
         }
         notTakenTarget.replaceStatement(new CommentStatement("empty if block"));
         // Replace the not taken target with an 'empty if statement'.
-
-        return false;
     }
 
     /*
