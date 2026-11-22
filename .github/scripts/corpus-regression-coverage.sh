@@ -19,7 +19,7 @@ if [[ ! -d "$fixture_root/precompiled_tests" || ! -d "$fixture_root/hardcoded" ]
 fi
 
 mkdir -p "$report_root"
-total_classes=0
+total_inputs=0
 total_variants=0
 
 compare_fixture_set() {
@@ -30,15 +30,15 @@ compare_fixture_set() {
     local baseline_log="$report_root/$name.baseline.log"
     local current_log="$report_root/$name.current.log"
     local comparison_log="$report_root/$name.diff"
-    local class_file
+    local fixture_file
     local -a fixture_files=()
 
-    while IFS= read -r -d '' class_file; do
-        fixture_files+=("$class_file")
+    while IFS= read -r -d '' fixture_file; do
+        fixture_files+=("$fixture_file")
     done < <(find "$source_dir" -type f \( -name '*.class' -o -name '*.jar' \) -print0 | sort -z)
 
     if (( ${#fixture_files[@]} == 0 )); then
-        echo "No compiled classes found in $source_dir" >&2
+        echo "No compiled fixtures found in $source_dir" >&2
         exit 1
     fi
 
@@ -65,13 +65,20 @@ compare_fixture_set() {
         exit 1
     fi
 
-    total_classes=$((total_classes + ${#fixture_files[@]}))
+    total_inputs=$((total_inputs + ${#fixture_files[@]}))
     total_variants=$((total_variants + 1))
 }
 
 for fixture_directory in "$fixture_root"/precompiled_tests/*; do
     if [[ -d "$fixture_directory" ]]; then
         compare_fixture_set "${fixture_directory##*/}" "$fixture_directory"
+    fi
+done
+
+for required_version in java_21 java_25; do
+    if [[ ! -d "$fixture_root/output/$required_version" ]]; then
+        echo "Compiled $required_version fixture directory is missing." >&2
+        exit 1
     fi
 done
 
@@ -83,9 +90,9 @@ done
 
 compare_fixture_set "hardcoded" "$fixture_root/hardcoded"
 
-if (( total_variants < 2 || total_classes < 1000 )); then
-    echo "Unexpectedly small decompilation corpus: $total_variants sets, $total_classes classes" >&2
+if (( total_variants < 12 || total_inputs < 20000 )); then
+    echo "Unexpectedly small decompilation corpus: $total_variants sets, $total_inputs classes" >&2
     exit 1
 fi
 
-echo "Verified $total_classes compiled class files across $total_variants fixture sets against master."
+echo "Verified $total_inputs compiled fixture inputs across $total_variants fixture sets against master."
