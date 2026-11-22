@@ -58,6 +58,12 @@ if [[ -z "$(find "$current_output" -type f -name '*.java' -print -quit)" ]]; the
     exit 1
 fi
 
+for comparison_output in "$baseline_output" "$current_output"; do
+    if [[ -f "$comparison_output/summary.txt" ]]; then
+        sed -i '/^Decompiled with CFR /d' "$comparison_output/summary.txt"
+    fi
+done
+
 if ! diff -qr "$baseline_output" "$current_output" > "$report_root/output.diff"; then
     echo "Decompilation output differs from master for $fixture_set:" >&2
     head -n 40 "$report_root/output.diff" >&2
