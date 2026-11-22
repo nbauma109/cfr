@@ -68,6 +68,7 @@ public class Keywords {
         keywords.put("void", null);
         keywords.put("volatile", null);
         keywords.put("while", null);
+        keywords.put("_", null);
     }
 
     public static boolean isAKeyword(String string) {
