@@ -54,6 +54,7 @@ jobs:
         java -cp "$workdir/original" ResourceCloseHarness > "$workdir/original-output.txt"
         jar cf "$workdir/input.jar" -C "$workdir/original" org/benf/cfr/tests
         java -cp target/classes org.benf.cfr.reader.Main "$workdir/input.jar" --outputdir "$workdir/decompiled"
+        find "$workdir/decompiled" -name '*.java' -exec sed -n '1,200p' {} \;
         find "$workdir/decompiled" -name '*.java' -print0 | xargs -0 javac -d "$workdir/roundtrip"
         cp "$workdir/original/ResourceCloseHarness.class" "$workdir/roundtrip/"
         java -cp "$workdir/roundtrip" ResourceCloseHarness > "$workdir/roundtrip-output.txt"
