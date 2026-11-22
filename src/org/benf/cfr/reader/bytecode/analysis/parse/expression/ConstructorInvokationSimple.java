@@ -3,6 +3,7 @@ package org.benf.cfr.reader.bytecode.analysis.parse.expression;
 import org.benf.cfr.reader.bytecode.analysis.loc.BytecodeLoc;
 import org.benf.cfr.reader.bytecode.analysis.opgraph.op4rewriters.VarArgsRewriter;
 import org.benf.cfr.reader.bytecode.analysis.parse.Expression;
+import org.benf.cfr.reader.bytecode.analysis.parse.literal.TypedLiteral;
 import org.benf.cfr.reader.bytecode.analysis.parse.LValue;
 import org.benf.cfr.reader.bytecode.analysis.parse.expression.misc.Precedence;
 import org.benf.cfr.reader.bytecode.analysis.parse.expression.rewriteinterface.FunctionProcessor;
@@ -80,11 +81,19 @@ public class ConstructorInvokationSimple extends AbstractConstructorInvokation i
 
         d.keyword("new ").dump(clazz).separator("(");
         boolean first = true;
+        List<JavaTypeInstance> parameterTypes = prototype.getArgs();
         for (int i = 0; i < args.size(); ++i) {
             if (prototype.isHiddenArg(i)) continue;
             Expression arg = args.get(i);
             if (!first) d.print(", ");
             first = false;
+            if (i < parameterTypes.size() && arg instanceof Literal &&
+                    ((Literal) arg).getValue().getType() == TypedLiteral.LiteralType.Integer) {
+                JavaTypeInstance parameterType = parameterTypes.get(i);
+                if (parameterType == RawJavaType.BYTE || parameterType == RawJavaType.SHORT) {
+                    d.separator("(").dump(parameterType).separator(")");
+                }
+            }
             d.dump(arg);
         }
         d.separator(")");
