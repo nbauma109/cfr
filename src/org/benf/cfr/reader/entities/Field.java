@@ -3,6 +3,7 @@ package org.benf.cfr.reader.entities;
 import org.benf.cfr.reader.bytecode.analysis.parse.literal.TypedLiteral;
 import org.benf.cfr.reader.bytecode.analysis.types.ClassNameUtils;
 import org.benf.cfr.reader.bytecode.analysis.types.DeclarationAnnotationHelper;
+import org.benf.cfr.reader.bytecode.analysis.types.JavaArrayTypeInstance;
 import org.benf.cfr.reader.bytecode.analysis.types.JavaRefTypeInstance;
 import org.benf.cfr.reader.bytecode.analysis.types.JavaTypeInstance;
 import org.benf.cfr.reader.bytecode.analysis.types.MiscAnnotations;
@@ -140,6 +141,10 @@ public class Field implements KnowsRawSize, TypeUsageCollectable {
         }
     }
 
+    public String getDescriptor() {
+        return cp.getUTF8Entry(descriptorIndex).getValue();
+    }
+
     public JavaTypeInstance getJavaTypeInstance() {
         if (cachedDecodedType == null) {
             cachedDecodedType = generateTypeInstance();
@@ -227,7 +232,14 @@ public class Field implements KnowsRawSize, TypeUsageCollectable {
     }
 
     public void dump(Dumper d, String name, ClassFile owner, boolean asRecordField) {
+        dump(d, name, owner, asRecordField, false);
+    }
+
+    public void dump(Dumper d, String name, ClassFile owner, boolean asRecordField, boolean varargs) {
         JavaTypeInstance type = getJavaTypeInstance();
+        if (varargs && type instanceof JavaArrayTypeInstance) {
+            type = ((JavaArrayTypeInstance) type).getVarArgTweak();
+        }
 
         List<AnnotationTableEntry> declarationAnnotations = MiscAnnotations.BasicAnnotations(attributes);
         // If field is backing a record component, get annotations for component as well
