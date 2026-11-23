@@ -1,5 +1,7 @@
 package org.benf.cfr.reader.entities.classfilehelpers;
 
+import org.benf.cfr.reader.bytecode.analysis.types.MethodPrototype;
+import org.benf.cfr.reader.entities.Method;
 import org.benf.cfr.reader.entities.AccessFlag;
 import org.benf.cfr.reader.entities.ClassFile;
 import org.benf.cfr.reader.entities.ClassFileField;
@@ -35,12 +37,29 @@ public class ClassFileDumperRecord extends AbstractClassFileDumper {
                     }
                 });
         boolean first = true;
-        for (ClassFileField f : fields) {
+        boolean varargs = hasCanonicalVarargsConstructor(c, fields);
+        for (int index = 0; index < fields.size(); ++index) {
             first = StringUtils.comma(first, d);
-            f.dumpAsRecord(d, c);
+            fields.get(index).dumpAsRecord(d, c, varargs && index == fields.size() - 1);
         }
         d.print(") ");
         dumpImplements(d, c.getClassSignature());
+    }
+
+    private static boolean hasCanonicalVarargsConstructor(ClassFile classFile, List<ClassFileField> fields) {
+        StringBuilder descriptor = new StringBuilder("(");
+        for (ClassFileField field : fields) {
+            descriptor.append(field.getField().getDescriptor());
+        }
+        descriptor.append(")V");
+
+        for (Method constructor : classFile.getConstructors()) {
+            MethodPrototype prototype = constructor.getMethodPrototype();
+            if (prototype.isVarArgs() && descriptor.toString().equals(prototype.getOriginalDescriptor())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
