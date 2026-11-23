@@ -6,6 +6,7 @@ import org.benf.cfr.reader.bytecode.analysis.parse.Expression;
 import org.benf.cfr.reader.bytecode.analysis.parse.LValue;
 import org.benf.cfr.reader.bytecode.analysis.parse.StatementContainer;
 import org.benf.cfr.reader.bytecode.analysis.parse.expression.LambdaExpression;
+import org.benf.cfr.reader.bytecode.analysis.structured.expression.StructuredStatementExpression;
 import org.benf.cfr.reader.bytecode.analysis.parse.lvalue.LocalVariable;
 import org.benf.cfr.reader.bytecode.analysis.parse.lvalue.SentinelLocalClassLValue;
 import org.benf.cfr.reader.bytecode.analysis.parse.lvalue.StaticVariable;
@@ -76,8 +77,14 @@ public class VariableNameTidier implements StructuredStatementTransformer {
     public static class NameDiscoverer extends AbstractExpressionRewriter implements StructuredStatementTransformer {
         private final Set<String> usedNames = SetFactory.newSet();
         private static final Set<String> EMPTY = SetFactory.newSet();
+        private final boolean collectDeclarations;
 
         private NameDiscoverer() {
+            this(false);
+        }
+
+        private NameDiscoverer(boolean collectDeclarations) {
+            this.collectDeclarations = collectDeclarations;
         }
 
 
@@ -92,6 +99,7 @@ public class VariableNameTidier implements StructuredStatementTransformer {
         }
 
         public StructuredStatement transform(StructuredStatement in, StructuredScope scope) {
+            if (collectDeclarations) addLValues(in.findCreatedHere());
             /*
              * Check if this statement has any embedded lambdas, as these can define clashing scopes.
              * Note that we /WONT/ collect these as definedHere, as they don't ever generate or escape
@@ -106,7 +114,16 @@ public class VariableNameTidier implements StructuredStatementTransformer {
         @Override
         public Expression rewriteExpression(Expression expression, SSAIdentifiers ssaIdentifiers, StatementContainer statementContainer, ExpressionRewriterFlags flags) {
             if (expression instanceof LambdaExpression) {
-                addLValues(((LambdaExpression) expression).getArgs());
+                LambdaExpression lambda = (LambdaExpression) expression;
+                addLValues(lambda.getArgs());
+                Expression result = lambda.getResult();
+                if (result instanceof StructuredStatementExpression) {
+                    NameDiscoverer nested = new NameDiscoverer(true);
+                    StructuredScope nestedScope = new StructuredScope();
+                    nestedScope.add(((StructuredStatementExpression) result).getContent());
+                    nested.transform(((StructuredStatementExpression) result).getContent(), nestedScope);
+                    usedNames.addAll(nested.usedNames);
+                }
                 return expression;
             } else {
                 return expression.applyExpressionRewriter(this, ssaIdentifiers, statementContainer, flags);
