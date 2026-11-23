@@ -11,12 +11,14 @@ import org.benf.cfr.reader.bytecode.analysis.types.JavaTypeInstance;
 import org.benf.cfr.reader.bytecode.analysis.types.discovery.InferredJavaType;
 import org.benf.cfr.reader.entities.ClassFile;
 import org.benf.cfr.reader.entities.ClassFileField;
-import org.benf.cfr.reader.entities.Field;
 import org.benf.cfr.reader.entities.constantpool.ConstantPoolEntry;
 import org.benf.cfr.reader.entities.constantpool.ConstantPoolEntryFieldRef;
 import org.benf.cfr.reader.state.TypeUsageCollector;
 import org.benf.cfr.reader.util.CannotLoadClassException;
 import org.benf.cfr.reader.util.ConfusedCFRException;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public abstract class AbstractFieldVariable extends AbstractLValue {
 
@@ -138,34 +140,37 @@ public abstract class AbstractFieldVariable extends AbstractLValue {
 
 
     public static ClassFileField getField(ConstantPoolEntryFieldRef fieldRef) {
-        String name = fieldRef.getLocalName();
-        JavaRefTypeInstance ref = (JavaRefTypeInstance) fieldRef.getClassEntry().getTypeInstance();
-        try {
-            ClassFile classFile = ref.getClassFile();
-            if (classFile == null) return null;
-
-            ClassFileField field = classFile.getFieldByName(name, fieldRef.getJavaTypeInstance());
-            return field;
-        } catch (NoSuchFieldException ignore) {
-        } catch (CannotLoadClassException ignore) {
-        }
-        return null;
+        return getField(fieldRef.getClassEntry().getTypeInstance(), fieldRef.getLocalName(),
+                fieldRef.getJavaTypeInstance(), new HashSet<JavaTypeInstance>());
     }
 
+    private static ClassFileField getField(JavaTypeInstance owner, String name, JavaTypeInstance fieldType,
+                                           Set<JavaTypeInstance> visited) {
+        if (owner == null) return null;
+        JavaTypeInstance resolvedOwner = owner.getDeGenerifiedType();
+        if (!(resolvedOwner instanceof JavaRefTypeInstance) || !visited.add(resolvedOwner)) return null;
+
+        try {
+            ClassFile classFile = ((JavaRefTypeInstance) resolvedOwner).getClassFile();
+            if (classFile == null) return null;
+
+            try {
+                return classFile.getFieldByNameAndDescriptor(name, fieldType);
+            } catch (NoSuchFieldException ignored) {
+            }
+
+            for (JavaTypeInstance interfaceType : classFile.getRawInterfaceTypes()) {
+                ClassFileField interfaceField = getField(interfaceType, name, fieldType, visited);
+                if (interfaceField != null) return interfaceField;
+            }
+
+            return getField(classFile.getRawBaseClassType(), name, fieldType, visited);
+        } catch (CannotLoadClassException ignored) {
+            return null;
+        }
+    }
 
     private static InferredJavaType getFieldType(ConstantPoolEntryFieldRef fieldRef) {
-        String name = fieldRef.getLocalName();
-        JavaRefTypeInstance ref = (JavaRefTypeInstance) fieldRef.getClassEntry().getTypeInstance();
-        try {
-            ClassFile classFile = ref.getClassFile();
-            if (classFile != null) {
-                // this now seems rather pointless, as it's passing the type to GET the type!
-                Field field = classFile.getFieldByName(name, fieldRef.getJavaTypeInstance()).getField();
-                return new InferredJavaType(field.getJavaTypeInstance(), InferredJavaType.Source.FIELD, true);
-            }
-        } catch (CannotLoadClassException ignore) {
-        } catch (NoSuchFieldException ignore) {
-        }
         return new InferredJavaType(fieldRef.getJavaTypeInstance(), InferredJavaType.Source.FIELD, true);
     }
 

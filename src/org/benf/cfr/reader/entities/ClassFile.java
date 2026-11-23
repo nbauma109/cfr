@@ -565,6 +565,17 @@ public class ClassFile implements Dumpable, TypeUsageCollectable {
         return field;
     }
 
+    public ClassFileField getFieldByNameAndDescriptor(String name, JavaTypeInstance type) throws NoSuchFieldException {
+        ensureFieldsByName();
+        for (ClassFileField field : fields) {
+            Field declaration = field.getField();
+            if (declaration.getOriginalFieldName().equals(name) && declaration.getDescriptorType().equals(type)) {
+                return field;
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
     private void calculateFieldsByName() {
         Options options = constantPool.getDCCommonState().getOptions();
         boolean testIllegal = !options.getOption(OptionsImpl.RENAME_ILLEGAL_IDENTS);
@@ -1076,6 +1087,18 @@ public class ClassFile implements Dumpable, TypeUsageCollectable {
 
     public JavaRefTypeInstance getRefClassType() {
         return (JavaRefTypeInstance)thisClass.getTypeInstance();
+    }
+
+    public JavaTypeInstance getRawBaseClassType() {
+        return rawSuperClass == null ? null : rawSuperClass.getTypeInstance();
+    }
+
+    public List<JavaTypeInstance> getRawInterfaceTypes() {
+        List<JavaTypeInstance> types = ListFactory.newList();
+        for (ConstantPoolEntryClass rawInterface : rawInterfaces) {
+            types.add(rawInterface.getTypeInstance());
+        }
+        return types;
     }
 
     public JavaTypeInstance getBaseClassType() {

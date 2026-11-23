@@ -140,6 +140,10 @@ public class Field implements KnowsRawSize, TypeUsageCollectable {
         }
     }
 
+    public JavaTypeInstance getDescriptorType() {
+        return ConstantPoolUtils.decodeTypeTok(cp.getUTF8Entry(descriptorIndex).getValue(), cp);
+    }
+
     public JavaTypeInstance getJavaTypeInstance() {
         if (cachedDecodedType == null) {
             cachedDecodedType = generateTypeInstance();
@@ -149,6 +153,10 @@ public class Field implements KnowsRawSize, TypeUsageCollectable {
 
     void setDisambiguate() {
         disambiguate = true;
+    }
+
+    public String getOriginalFieldName() {
+        return fieldName;
     }
 
     public String getFieldName() {

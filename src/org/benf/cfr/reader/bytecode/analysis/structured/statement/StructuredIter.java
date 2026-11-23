@@ -11,6 +11,12 @@ import org.benf.cfr.reader.bytecode.analysis.parse.utils.BlockIdentifier;
 import org.benf.cfr.reader.bytecode.analysis.parse.utils.scope.LValueScopeDiscoverer;
 import org.benf.cfr.reader.bytecode.analysis.parse.utils.scope.ScopeDiscoverInfoCache;
 import org.benf.cfr.reader.bytecode.analysis.structured.StructuredStatement;
+import org.benf.cfr.reader.bytecode.analysis.types.BindingSuperContainer;
+import org.benf.cfr.reader.bytecode.analysis.types.JavaGenericRefTypeInstance;
+import org.benf.cfr.reader.bytecode.analysis.types.JavaRefTypeInstance;
+import org.benf.cfr.reader.bytecode.analysis.types.JavaTypeInstance;
+import org.benf.cfr.reader.bytecode.analysis.types.RawJavaType;
+import org.benf.cfr.reader.bytecode.analysis.types.TypeConstants;
 import org.benf.cfr.reader.state.TypeUsageCollector;
 import org.benf.cfr.reader.util.collections.ListFactory;
 import org.benf.cfr.reader.util.output.Dumper;
@@ -46,7 +52,22 @@ public class StructuredIter extends AbstractStructuredBlockStatement {
         if (block.hasForeignReferences()) dumper.label(block.getName(), true);
         dumper.keyword("for ").separator("(");
         if (iterator.isFinal()) dumper.keyword("final ");
-        LValue.Creation.dump(dumper, iterator).separator(" : ").dump(list).separator(") ");
+        LValue.Creation.dump(dumper, iterator).separator(" : ");
+        JavaTypeInstance listType = list.getInferredJavaType().getJavaTypeInstance();
+        JavaTypeInstance elementType = iterator.getInferredJavaType().getJavaTypeInstance();
+        boolean wrapSource = false;
+        if (listType instanceof JavaRefTypeInstance && !(listType instanceof JavaGenericRefTypeInstance) &&
+                !(elementType instanceof RawJavaType) && !TypeConstants.OBJECT.equals(elementType)) {
+            BindingSuperContainer supers = listType.getBindingSupers();
+            if (supers != null && supers.containsBase(TypeConstants.ITERABLE)) {
+                dumper.separator("(").dump(TypeConstants.ITERABLE).separator("<").dump(elementType)
+                        .separator(">) (").dump(TypeConstants.ITERABLE).separator(") (");
+                wrapSource = true;
+            }
+        }
+        dumper.dump(list);
+        if (wrapSource) dumper.separator(")");
+        dumper.separator(") ");
         getBody().dump(dumper);
         return dumper;
     }

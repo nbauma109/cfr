@@ -5,7 +5,13 @@ import org.benf.cfr.reader.bytecode.analysis.parse.Expression;
 import org.benf.cfr.reader.bytecode.analysis.parse.expression.misc.Precedence;
 import org.benf.cfr.reader.bytecode.analysis.parse.rewriters.CloneHelper;
 import org.benf.cfr.reader.bytecode.analysis.parse.utils.*;
+import org.benf.cfr.reader.bytecode.analysis.types.BindingSuperContainer;
+import org.benf.cfr.reader.bytecode.analysis.types.JavaGenericRefTypeInstance;
+import org.benf.cfr.reader.bytecode.analysis.types.JavaRefTypeInstance;
 import org.benf.cfr.reader.bytecode.analysis.types.JavaTypeInstance;
+import org.benf.cfr.reader.bytecode.analysis.types.JavaWildcardTypeInstance;
+import org.benf.cfr.reader.bytecode.analysis.types.RawJavaType;
+import org.benf.cfr.reader.bytecode.analysis.types.TypeConstants;
 import org.benf.cfr.reader.bytecode.analysis.types.MethodPrototype;
 import org.benf.cfr.reader.entities.constantpool.ConstantPool;
 import org.benf.cfr.reader.entities.constantpool.ConstantPoolEntryMethodRef;
@@ -49,7 +55,15 @@ public class MemberFunctionInvokation extends AbstractMemberFunctionInvokation {
 
     @Override
     public Dumper dumpInner(Dumper d) {
-        getObject().dumpWithOuterPrecedence(d, getPrecedence(), Troolean.NEITHER);
+        JavaTypeInstance elementType = getForEachElementType();
+        if (elementType != null) {
+            d.separator("((").dump(TypeConstants.ITERABLE).separator("<").dump(elementType)
+                    .separator(">) (").dump(TypeConstants.ITERABLE).separator(") (");
+            getObject().dumpWithOuterPrecedence(d, getPrecedence(), Troolean.NEITHER);
+            d.separator("))");
+        } else {
+            getObject().dumpWithOuterPrecedence(d, getPrecedence(), Troolean.NEITHER);
+        }
 
         MethodPrototype methodPrototype = getMethodPrototype();
         if (!isInitMethod) d.separator(".").methodName(getFixedName(), methodPrototype, false, false);
@@ -64,6 +78,30 @@ public class MemberFunctionInvokation extends AbstractMemberFunctionInvokation {
         }
         d.separator(")");
         return d;
+    }
+
+    private JavaTypeInstance getForEachElementType() {
+        if (!"forEach".equals(getName()) || getArgs().size() != 1) return null;
+
+        Expression callback = getArgs().get(0);
+        if (!(callback instanceof LambdaExpression) && !(callback instanceof LambdaExpressionFallback)) return null;
+
+        JavaTypeInstance sourceType = getObject().getInferredJavaType().getJavaTypeInstance();
+        if (!(sourceType instanceof JavaRefTypeInstance)) return null;
+        BindingSuperContainer supers = sourceType.getBindingSupers();
+        if (supers == null || !supers.containsBase(TypeConstants.ITERABLE)) return null;
+
+        JavaTypeInstance callbackType = getArgs().get(0).getInferredJavaType().getJavaTypeInstance();
+        if (!(callbackType instanceof JavaGenericRefTypeInstance)) return null;
+
+        JavaGenericRefTypeInstance consumerType = (JavaGenericRefTypeInstance) callbackType;
+        if (!"java.util.function.Consumer".equals(consumerType.getTypeInstance().getRawName()) ||
+                consumerType.getGenericTypes().size() != 1) return null;
+
+        JavaTypeInstance elementType = consumerType.getGenericTypes().get(0);
+        if (elementType instanceof JavaWildcardTypeInstance || elementType instanceof RawJavaType ||
+                TypeConstants.OBJECT.equals(elementType)) return null;
+        return elementType;
     }
 
     public boolean isInitMethod() {
