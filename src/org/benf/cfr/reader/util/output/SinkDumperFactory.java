@@ -35,6 +35,15 @@ public class SinkDumperFactory implements DumperFactory {
         this.version = version;
     }
 
+    private <T> OutputSinkFactory.Sink<T> getSink(OutputSinkFactory.SinkType sinkType,
+                                                  OutputSinkFactory.SinkClass sinkClass) {
+        OutputSinkFactory.Sink<T> sink = sinkFactory.getSink(sinkType, sinkClass);
+        if (sink != null) {
+            return sink;
+        }
+        return new NopSink<T>();
+    }
+
     @Override
     public DumperFactory getFactoryWithPrefix(String prefix, int version) {
         return new SinkDumperFactory(this, version);
@@ -59,7 +68,7 @@ public class SinkDumperFactory implements DumperFactory {
             switch (sinkClass) {
                 case LINE_NUMBER_MAPPING: {
 
-                    final OutputSinkFactory.Sink<SinkReturns.LineNumberMapping> sink = sinkFactory.getSink(OutputSinkFactory.SinkType.LINENUMBER, OutputSinkFactory.SinkClass.LINE_NUMBER_MAPPING);
+                    final OutputSinkFactory.Sink<SinkReturns.LineNumberMapping> sink = getSink(OutputSinkFactory.SinkType.LINENUMBER, OutputSinkFactory.SinkClass.LINE_NUMBER_MAPPING);
                     BytecodeDumpConsumer d = new BytecodeDumpConsumer() {
                         @Override
                         public void accept(Collection<Item> items) {
@@ -104,17 +113,17 @@ public class SinkDumperFactory implements DumperFactory {
         for (OutputSinkFactory.SinkClass sinkClass : supported) {
             switch (sinkClass) {
                 case DECOMPILED_MULTIVER:
-                    return SinkSourceClassDumper(sinkFactory.<SinkReturns.Decompiled>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), version, classType, methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
+                    return SinkSourceClassDumper(this.<SinkReturns.Decompiled>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), version, classType, methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
                 case DECOMPILED:
-                    return SinkSourceClassDumper(sinkFactory.<SinkReturns.Decompiled>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), classType, methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
+                    return SinkSourceClassDumper(this.<SinkReturns.Decompiled>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), classType, methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
                 case STRING:
-                    return SinkStringClassDumper(sinkFactory.<String>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
+                    return SinkStringClassDumper(this.<String>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
                 case TOKEN_STREAM:
-                    return TokenStreamClassDumper(sinkFactory.<SinkReturns.Token>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), version, classType, methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
+                    return TokenStreamClassDumper(this.<SinkReturns.Token>getSink(OutputSinkFactory.SinkType.JAVA, sinkClass), version, classType, methodErrorCollector, typeUsageInformation, illegalIdentifierDump);
                 default:
             }
         }
-        OutputSinkFactory.Sink<String> stringSink = sinkFactory.getSink(OutputSinkFactory.SinkType.JAVA, OutputSinkFactory.SinkClass.STRING);
+        OutputSinkFactory.Sink<String> stringSink = getSink(OutputSinkFactory.SinkType.JAVA, OutputSinkFactory.SinkClass.STRING);
         if (stringSink == null) {
             stringSink = new NopStringSink();
         }
@@ -209,12 +218,12 @@ public class SinkDumperFactory implements DumperFactory {
         for (OutputSinkFactory.SinkClass sinkClass : supported) {
             switch (sinkClass) {
                 case STRING:
-                    return new SinkProgressDumper(sinkFactory.<String>getSink(OutputSinkFactory.SinkType.PROGRESS, sinkClass));
+                    return new SinkProgressDumper(this.<String>getSink(OutputSinkFactory.SinkType.PROGRESS, sinkClass));
                 default:
                     continue;
             }
         }
-        OutputSinkFactory.Sink<String> stringSink = sinkFactory.getSink(OutputSinkFactory.SinkType.PROGRESS, OutputSinkFactory.SinkClass.STRING);
+        OutputSinkFactory.Sink<String> stringSink = getSink(OutputSinkFactory.SinkType.PROGRESS, OutputSinkFactory.SinkClass.STRING);
         if (stringSink == null) {
             stringSink = new NopStringSink();
         }
@@ -229,12 +238,12 @@ public class SinkDumperFactory implements DumperFactory {
         for (OutputSinkFactory.SinkClass sinkClass : supported) {
             switch (sinkClass) {
                 case STRING:
-                    return new SinkSummaryDumper(sinkFactory.<String>getSink(OutputSinkFactory.SinkType.SUMMARY, sinkClass));
+                    return new SinkSummaryDumper(this.<String>getSink(OutputSinkFactory.SinkType.SUMMARY, sinkClass));
                 default:
                     continue;
             }
         }
-        OutputSinkFactory.Sink<String> stringSink = sinkFactory.getSink(OutputSinkFactory.SinkType.SUMMARY, OutputSinkFactory.SinkClass.STRING);
+        OutputSinkFactory.Sink<String> stringSink = getSink(OutputSinkFactory.SinkType.SUMMARY, OutputSinkFactory.SinkClass.STRING);
         if (stringSink == null) {
             stringSink = new NopStringSink();
         }
@@ -248,18 +257,24 @@ public class SinkDumperFactory implements DumperFactory {
         for (OutputSinkFactory.SinkClass sinkClass : supported) {
             switch (sinkClass) {
                 case STRING:
-                    return new SinkStringExceptionDumper(sinkFactory.<String>getSink(OutputSinkFactory.SinkType.EXCEPTION, sinkClass));
+                    return new SinkStringExceptionDumper(this.<String>getSink(OutputSinkFactory.SinkType.EXCEPTION, sinkClass));
                 case EXCEPTION_MESSAGE:
-                    return new SinkExceptionDumper(sinkFactory.<SinkReturns.ExceptionMessage>getSink(OutputSinkFactory.SinkType.EXCEPTION, sinkClass));
+                    return new SinkExceptionDumper(this.<SinkReturns.ExceptionMessage>getSink(OutputSinkFactory.SinkType.EXCEPTION, sinkClass));
                 default:
                     continue;
             }
         }
-        OutputSinkFactory.Sink<String> stringSink = sinkFactory.getSink(OutputSinkFactory.SinkType.EXCEPTION, OutputSinkFactory.SinkClass.STRING);
+        OutputSinkFactory.Sink<String> stringSink = getSink(OutputSinkFactory.SinkType.EXCEPTION, OutputSinkFactory.SinkClass.STRING);
         if (stringSink == null) {
             stringSink = new NopStringSink();
         }
         return new SinkStringExceptionDumper(stringSink);
+    }
+
+    private static class NopSink<T> implements OutputSinkFactory.Sink<T> {
+        @Override
+        public void write(T value) {
+        }
     }
 
     private static class NopStringSink implements OutputSinkFactory.Sink<String> {
